@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 120
+exclude =
+    .git,
+    __pycache__,
+    results,
+    .venv,
+    .venv-*,
+per-file-ignores =
+    # Entry-point scripts must adjust sys.path before importing `core`/`agent_security`.
+    layers/*/*/run_*.py: E402
+    # Test suite path bootstrap precedes imports by design.
+    tests/*.py: E402

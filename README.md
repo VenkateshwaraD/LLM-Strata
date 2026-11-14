@@ -62,10 +62,10 @@ LLM Strata is composed of 14 independent security and safety layers. Each layer 
 
 The framework combines pre-deployment testing, runtime scanning, agent/RAG security tests, human review, and production monitoring. Coverage is configurable and should be interpreted as evidence from the selected test corpus.
 
-- 🧪 **Pre-deployment:** [Garak](garak/garak.md), [DeepEval](deepeval/deepeval.md), [RAGAS](ragas/ragas.md), [PyRIT](pyrit/pyrit.md)
-- 📡 **Runtime and monitoring:** [LLM Guard](llm_guard/llm-guard.md), [LangFuse](langfuse/langfuse.md)
-- 🕵️ **Human and advanced attacks:** [Human Red Team](human_redteam/human-redteam.md), [Encoded Attacks](encoded_attacks/encoded-attacks.md), [In-Context Attacks](in_context_attacks/in-context-attacks.md), [Multilingual Attacks](multilingual/multilingual.md), [Backdoor Triggers](backdoor/backdoor.md)
-- 🤖 **Agent and RAG security:** [Tool Injection](tool_inject/tool-injection.md), [RAG Security](rag_security/rag-security.md), [Agent Security](agent_security/agent-security.md)
+- 🧪 **Pre-deployment:** [Garak](layers/scan/garak/garak.md), [DeepEval](layers/scan/deepeval/deepeval.md), [RAGAS](layers/scan/ragas/ragas.md), [PyRIT](layers/scan/pyrit/pyrit.md)
+- 📡 **Runtime and monitoring:** [LLM Guard](layers/scan/llm_guard/llm-guard.md), [LangFuse](layers/monitor/langfuse/langfuse.md)
+- 🕵️ **Human and advanced attacks:** [Human Red Team](layers/attack/human_redteam/human-redteam.md), [Encoded Attacks](layers/attack/encoded_attacks/encoded-attacks.md), [In-Context Attacks](layers/attack/in_context_attacks/in-context-attacks.md), [Multilingual Attacks](layers/attack/multilingual/multilingual.md), [Backdoor Triggers](layers/attack/backdoor/backdoor.md)
+- 🤖 **Agent and RAG security:** [Tool Injection](layers/attack/tool_inject/tool-injection.md), [RAG Security](layers/attack/rag_security/rag-security.md), [Agent Security](layers/attack/agent_security/agent-security.md)
 
 > 👆 Click any module name above to open its dedicated guide and learn more about its purpose, configuration, usage, outputs, and coverage.
 
@@ -142,7 +142,7 @@ Configure the applicable provider variables in `.env` or in the operating-system
 
 > ✅ **Select any one provider of your choice — you don't need to set up all of them.** Configure only the variables required by the provider/profile you plan to use.
 
-For production monitoring, also set `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`. Operating-system variables take precedence over `.env` values. Never commit `.env`, API keys, provider endpoints containing credentials, or generated reports. See [Providers and Secrets](Docs/providers-and-secrets.md) for the full provider matrix and precedence rules.
+For production monitoring, also set `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`. Operating-system variables take precedence over `.env` values. Never commit `.env`, API keys, provider endpoints containing credentials, or generated reports. See [Providers and Secrets](docs/providers-and-secrets.md) for the full provider matrix and precedence rules.
 
 ### 🎛️ Select a model profile
 
@@ -172,7 +172,7 @@ python run_security.py
 Run the focused unit tests:
 
 ```bash
-python -m unittest discover -s agent_security/tests -v
+python -m unittest discover -s tests -v
 ```
 
 ### 🔌 Supported Providers
@@ -202,7 +202,7 @@ The framework can assess these deployment contexts when the target is reachable 
 - 🌐 Multi-Cloud LLM
 - 🧱 Embedded/Application LLM
 
-> 💡 The framework supports OpenAI-compatible endpoints and selected LiteLLM-backed providers. Additional LiteLLM providers can be integrated through `client_factory.py` and `profiles.yaml`. See [Providers and Secrets](Docs/providers-and-secrets.md).
+> 💡 The framework supports OpenAI-compatible endpoints and selected LiteLLM-backed providers. Additional LiteLLM providers can be integrated through `core/client_factory.py` and `profiles.yaml`. See [Providers and Secrets](docs/providers-and-secrets.md).
 
 ## 🔄 CI/CD
 
@@ -229,42 +229,48 @@ The pipeline stores reports under `results/` as CI artifacts. Review reports rat
 
 | Guide | Description |
 |---|---|
-| 🏗️ [Architecture](Docs/architecture.md) | Pipeline phases, trust boundaries, and data flow |
-| 🎯 [Threat model](Docs/threat-model.md) | Assets, actors, assumptions, and coverage boundaries |
-| 🔑 [Providers and secrets](Docs/providers-and-secrets.md) | Profiles, credentials, endpoints, and provider integration |
-| 🔄 [CI/CD operations](Docs/ci-cd.md) | Stages, variables, artifacts, and release guidance |
-| 🧾 [Results and triage](Docs/results-and-triage.md) | Outcome interpretation and remediation workflow |
-| 🏭 [Production integration](Docs/production-integration.md) | Runtime enforcement and monitoring integration |
+| 🏗️ [Architecture](docs/architecture.md) | Pipeline phases, trust boundaries, and data flow |
+| 🎯 [Threat model](docs/threat-model.md) | Assets, actors, assumptions, and coverage boundaries |
+| 🔑 [Providers and secrets](docs/providers-and-secrets.md) | Profiles, credentials, endpoints, and provider integration |
+| 🔄 [CI/CD operations](docs/ci-cd.md) | Stages, variables, artifacts, and release guidance |
+| 🧾 [Results and triage](docs/results-and-triage.md) | Outcome interpretation and remediation workflow |
+| 🏭 [Production integration](docs/production-integration.md) | Runtime enforcement and monitoring integration |
 
 ## 📁 Project structure
 
 ```text
 LLM-Strata/
 ├── run_security.py          # Main pipeline runner
+├── setup.py                 # Environment setup
 ├── profiles.yaml            # Model profile selection
-├── profile_loader.py        # Profile loading
-├── env_loader.py            # Credential and .env loading
-├── client_factory.py        # OpenAI-compatible client creation
-├── ragas_config.yaml        # RAGAS configuration
 ├── requirements.txt         # Python dependencies
-├── setup.py                 # Package setup
-├── gitlab-ci.yml            # GitLab CI pipeline definition
-├── garak/                   # Layer 1
-├── deepeval/                # Layer 2
-├── ragas/                   # Layer 3
-├── pyrit/                   # Layer 4
-├── llm_guard/               # Layer 5
-├── langfuse/                # Layer 6
-├── human_redteam/           # Layer 7
-├── encoded_attacks/         # Layer 8
-├── many_shot/               # Layer 9
-├── multilingual/            # Layer 10
-├── tool_inject/             # Layer 11
-├── backdoor/                # Layer 12
-├── rag_security/            # Layer 13
-├── agent_security/          # Layer 14
-├── Docs/                    # Threat model, architecture, CI/CD, triage, integration
-└── results/                 # Generated reports 
+├── requirements-dev.txt     # Test/coverage dependencies
+├── .gitlab-ci.yml           # GitLab CI pipeline definition
+├── core/                    # Shared package
+│   ├── env_loader.py        # Credential and .env loading
+│   ├── profile_loader.py    # Profile loading
+│   └── client_factory.py    # OpenAI-compatible client creation
+├── layers/
+│   ├── scan/                # Pre-deployment assessment
+│   │   ├── garak/           # Layer 1
+│   │   ├── deepeval/        # Layer 2
+│   │   ├── ragas/           # Layer 3
+│   │   ├── pyrit/           # Layer 4
+│   │   └── llm_guard/       # Layer 5
+│   ├── attack/              # Adversarial simulation
+│   │   ├── human_redteam/   # Layer 6
+│   │   ├── encoded_attacks/ # Layer 7
+│   │   ├── in_context_attacks/ # Layer 8
+│   │   ├── multilingual/    # Layer 9
+│   │   ├── tool_inject/     # Layer 10
+│   │   ├── backdoor/        # Layer 11
+│   │   ├── rag_security/    # Layer 12
+│   │   └── agent_security/  # Layer 13
+│   └── monitor/             # Production monitoring
+│       └── langfuse/        # Layer 14
+├── docs/                    # Threat model, architecture, CI/CD, triage, integration
+├── tests/                   # Unit tests
+└── results/                 # Generated reports
 ```
 
 ---

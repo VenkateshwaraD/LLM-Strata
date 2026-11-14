@@ -1,12 +1,9 @@
-"""
-run_security.py - Run full LLM security + safety pipeline
-                  Garak + DeepEval + RAGAS + PyRIT + LLM Guard + LangFuse + Human Red Team
-                  + Encoded & Obfuscated Attack Testing
-                  + Many-Shot Jailbreak Testing
-                  + Multilingual Attacks
-                  + Agentic Tool-Call Injection
-                  + Backdoor / Trojan Trigger Testing
-                  + RAG / Vector Embedding Security (OWASP LLM08)
+"""run_security.py - Run the full LLM security + safety pipeline.
+
+Layers: Garak + DeepEval + RAGAS + PyRIT + LLM Guard (scan)
+        Encoded + In-Context + Multilingual + Tool-Inject + Backdoor
+        + RAG Security + Agent Security + Human Red Team (attack)
+        LangFuse (monitor)
 Cross-platform: Windows and Linux.
 
 Author : Venkateshwara Doijode
@@ -44,70 +41,201 @@ Usage:
 """
 
 import argparse
-import os
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
-from env_loader import load_dotenv,warn_provider_env
+from core.env_loader import load_dotenv, warn_provider_env
+
 load_dotenv()
 
 DRY_RUN = False
+REPO_ROOT = Path(__file__).resolve().parent
+
+
+@dataclass(frozen=True)
+class Step:
+    """One pipeline step: an --*-only flag, an optional --skip-* flag, and a runner."""
+
+    name: str
+    only_flag: str | None
+    skip_flag: str | None
+    title: str
+    subtitle: str
+    script: str
+    results_dir: str
+
+
+STEPS: tuple[Step, ...] = (
+    Step("garak", "garak_only", None,
+         "Garak: Vulnerability Scan + Red Teaming (pre-deployment)",
+         "Probing your LLM for vulnerabilities with adversarial inputs...",
+         "layers/scan/garak/run_garak.py", "results/garak/"),
+    Step("deepeval", "deepeval_only", None,
+         "DeepEval: Safety Testing (bias + toxicity + hallucination + PII)",
+         "Testing for harmful output, bias, hallucination, PII leakage, prompt injection...",
+         "layers/scan/deepeval/run_deepeval.py", "results/deepeval/"),
+    Step("ragas", "ragas_only", "skip_ragas",
+         "RAGAS: RAG Pipeline Safety (context poisoning + faithfulness)",
+         "Testing for poisoned context, hallucination, retrieval quality...",
+         "layers/scan/ragas/run_ragas.py", "results/ragas/"),
+    Step("pyrit", "pyrit_only", "skip_pyrit",
+         "PyRIT: Multi-turn Agentic Red Teaming",
+         "Running goal-directed adaptive attacks across multiple turns...",
+         "layers/scan/pyrit/run_pyrit.py", "results/pyrit/"),
+    Step("guard", "guard_only", None,
+         "LLM Guard: Runtime Protection Demo",
+         "Testing input/output scanners against sample attack prompts...",
+         "layers/scan/llm_guard/run_guard.py", "results/llm_guard/"),
+    Step("langfuse", "langfuse_only", "skip_langfuse",
+         "LangFuse: Production Monitoring Demo",
+         "Sending traced requests + scoring for safety in dashboard...",
+         "layers/monitor/langfuse/run_langfuse.py", "results/langfuse/"),
+    Step("encoded", "encoded_only", "skip_encoded",
+         "Encoded Attacks: Bypass & Obfuscation Testing",
+         "Testing base64, rot13, hex, morse, leetspeak, homoglyphs and more...",
+         "layers/attack/encoded_attacks/run_encoded_attacks.py", "results/encoded_attacks/"),
+    Step("in-context", "in_context_only", "skip_in_context",
+         "Many-Shot Jailbreaks: In-Context Conditioning Attacks",
+         "Testing pure-harmful, gradual-escalation, and camouflaged strategies...",
+         "layers/attack/in_context_attacks/run_many_shot.py", "results/in_context_attacks/"),
+    Step("multilingual", "multilingual_only", "skip_multilingual",
+         "Multilingual Attacks: Cross-Language Safety Bypass",
+         "Testing Arabic, Chinese, Russian, Hindi, Spanish, French, German...",
+         "layers/attack/multilingual/run_multilingual.py", "results/multilingual/"),
+    Step("tool-inject", "tool_inject_only", "skip_tool_inject",
+         "Tool-Call Injection: Agentic Indirect Prompt Injection",
+         "Injecting malicious instructions via search, file, email, database results...",
+         "layers/attack/tool_inject/run_tool_inject.py", "results/tool_inject/"),
+    Step("backdoor", "backdoor_only", "skip_backdoor",
+         "Backdoor Triggers: Trojan Phrase Amplification Testing",
+         "Measuring compliance rate with / without DAN, authority, roleplay triggers...",
+         "layers/attack/backdoor/run_backdoor.py", "results/backdoor/"),
+    Step("rag-security", "rag_security_only", "skip_rag_security",
+         "RAG Security: Vector / Embedding Weakness Testing (LLM08)",
+         "Testing 9 attack vectors: injection, PII leak, embedding authority override, flooding...",
+         "layers/attack/rag_security/run_rag_security.py", "results/rag_security/"),
+    Step("agent-security", "agent_security_only", "skip_agent_security",
+         "Agentic Security: Multi-turn, Tool Authorization, Memory",
+         "Testing multi-turn attacks, tool permissions, and agent memory isolation...",
+         "layers/attack/agent_security/run_agent_security.py", "results/agent_security/"),
+)
 
 
 def run(cmd: list[str]) -> int:
+    """Run a command from the repository root, honoring --dry-run."""
     print(f"\n  > {' '.join(cmd)}\n")
     if DRY_RUN:
         print("  [DRY RUN] - command not executed")
         return 0
-    result = subprocess.run(cmd, cwd=Path(__file__).resolve().parent)
+    result = subprocess.run(cmd, cwd=REPO_ROOT)
     return result.returncode
 
 
-def check_env():
-    warn_provider_env()
-
-
 def print_header(title: str):
+    """Print a section header."""
     print()
     print("=" * 55)
     print(f"  {title}")
     print("=" * 55)
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(description="LLM Strata - Security & Safety Pipeline Runner")
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--garak-only", action="store_true", help="Run Garak only")
-    group.add_argument("--deepeval-only", action="store_true", help="Run DeepEval only")
-    group.add_argument("--ragas-only", action="store_true", help="Run RAGAS only")
-    group.add_argument("--pyrit-only", action="store_true", help="Run PyRIT only")
-    group.add_argument("--guard-only", action="store_true", help="Run LLM Guard only")
-    group.add_argument("--langfuse-only", action="store_true", help="Run LangFuse only")
+    for step in STEPS:
+        flag = step.only_flag.replace("_", "-")
+        if step.name == "in-context":
+            group.add_argument(f"--{flag}", "--many-shot-only", dest=step.only_flag,
+                               action="store_true", help=f"Run {step.name} scan only")
+        else:
+            group.add_argument(f"--{flag}", dest=step.only_flag, action="store_true",
+                               help=f"Run {step.name} only")
     group.add_argument("--human-redteam", action="store_true", help="Launch human red team session")
-    group.add_argument("--encoded-only", action="store_true", help="Run encoded/obfuscated attack scan only")
-    group.add_argument("--in-context-only", "--many-shot-only", dest="in_context_only", action="store_true", help="Run in-context attack scan only")
-    group.add_argument("--multilingual-only", action="store_true", help="Run multilingual attack scan only")
-    group.add_argument("--tool-inject-only", action="store_true", help="Run agentic tool-call injection scan only")
-    group.add_argument("--backdoor-only", action="store_true", help="Run backdoor trigger scan only")
-    group.add_argument("--rag-security-only", action="store_true", help="Run RAG/vector security scan only")
-    group.add_argument("--agent-security-only", action="store_true", help="Run agentic security tests only")
     parser.add_argument("--garak-depth", default="standard",
-        choices=["quick", "standard", "reateam", "all"],
-        help="Garak probe depth (default: standard)")
-    parser.add_argument("--skip-pyrit", action="store_true", help="Skip PyRIT (slow)")
-    parser.add_argument("--skip-ragas", action="store_true", help="Skip RAGAS (if no RAG app)")
-    parser.add_argument("--skip-langfuse", action="store_true", help="Skip LangFuse (if keys not set)")
-    parser.add_argument("--skip-encoded", action="store_true", help="Skip encoded attack scan")
-    parser.add_argument("--skip-many-shot", action="store_true", help="Skip many-shot jailbreak scan")
-    parser.add_argument("--skip-multilingual", action="store_true", help="Skip multilingual attack scan")
-    parser.add_argument("--skip-tool-inject", action="store_true", help="Skip tool-call injection scan")
-    parser.add_argument("--skip-backdoor", action="store_true", help="Skip backdoor trigger scan")
-    parser.add_argument("--skip-rag-security", action="store_true", help="Skip RAG/vector security scan")
-    parser.add_argument("--skip-agent-security", action="store_true", help="Skip agentic security tests")
+                        choices=["quick", "standard", "redteam", "all"],
+                        help="Garak probe depth (default: standard)")
+    for step in STEPS:
+        if step.skip_flag:
+            flag = step.skip_flag.replace("_", "-")
+            if step.name == "in-context":
+                parser.add_argument(f"--{flag}", "--skip-many-shot", dest=step.skip_flag,
+                                    action="store_true", help=f"Skip {step.name} scan")
+            else:
+                parser.add_argument(f"--{flag}", dest=step.skip_flag, action="store_true",
+                                    help=f"Skip {step.name} scan")
     parser.add_argument("--dry-run", action="store_true", help="Print all steps without executing")
-    parser.add_argument("--ci", action="store_true", help="CI mode: skip interactive tools, exit 1 on any failure")
-    args = parser.parse_args()
+    parser.add_argument("--ci", action="store_true",
+                        help="CI mode: skip interactive tools, exit 1 on any failure")
+    return parser
+
+
+def step_command(step: Step, args: argparse.Namespace) -> list[str]:
+    """Build the subprocess command for a step."""
+    cmd = [sys.executable, step.script]
+    if step.name == "garak":
+        cmd += ["--probes", args.garak_depth]
+    return cmd
+
+
+def run_step(step: Step, args: argparse.Namespace, only_one: bool, exit_codes: list[int]):
+    """Run or skip a single step and record its exit code."""
+    only_selected = getattr(args, step.only_flag)
+    skipped = step.skip_flag and getattr(args, step.skip_flag)
+    if only_one and not only_selected:
+        return
+    if not only_selected and skipped:
+        print(f"\n  [SKIPPED] {step.name} - use --{step.only_flag.replace('_', '-')} to run separately")
+        return
+    print_header(f"STEP - {step.title}")
+    print(f"  {step.subtitle}")
+    exit_codes.append(run(step_command(step, args)))
+    print(f"\n  Results saved to: {step.results_dir}")
+
+
+def run_human_redteam(args: argparse.Namespace, only_one: bool):
+    """Run the interactive human red team session (never automatic, never in CI)."""
+    if args.human_redteam and not args.ci:
+        print_header("STEP - Human Red Team: Manual Attack Session")
+        print("  Interactive session - a human tester probes the model...")
+        run([sys.executable, "layers/attack/human_redteam/run_human_redteam.py"])
+        print("\n  Human red team results saved to: results/human_redteam/")
+    elif not only_one:
+        print("\n  [INFO] Human red team not run automatically (interactive).")
+        print("     Run manually: python run_security.py --human-redteam")
+
+
+def print_summary(exit_codes: list[int]):
+    """Print the results directory map and next steps."""
+    print_header("Security + Safety Run Complete")
+    print("  Results:")
+    for step in STEPS:
+        print(f"  {step.results_dir:<26} - {step.title.split(':')[0]}")
+    print("  results/human_redteam/    - human red team session logs")
+    print("  cloud.langfuse.com        - live production trace dashboard")
+    print()
+    print("  Next steps:")
+    print("  1. Review reports in results/ for security vulnerabilities and safety gaps")
+    print("  2. Integrate LLM Guard into your app for continuous monitoring")
+    print("  3. Instrument your app with LangFuse SDK for continuous monitoring")
+    print("  4. Run human red team: python run_security.py --human-redteam")
+    print("  5. Re-run after fixes to verify they're resolved")
+    print("=" * 55)
+
+
+def report_ci_status(args: argparse.Namespace, exit_codes: list[int]):
+    """Exit non-zero in CI mode when any step failed."""
+    if args.ci and any(code != 0 for code in exit_codes):
+        failed = sum(1 for code in exit_codes if code != 0)
+        print(f"\n  CI: {failed} tool(s) exited with errors - pipeline marked as failed.")
+        sys.exit(1)
+
+
+def main():
+    """Parse arguments and run the pipeline."""
+    args = build_parser().parse_args()
 
     global DRY_RUN
     DRY_RUN = args.dry_run
@@ -116,178 +244,16 @@ def main():
     print(f"  Platform : {sys.platform}")
     if DRY_RUN:
         print("  Mode     : DRY RUN - no commands will be executed")
-    check_env()
+    warn_provider_env()
 
-    only_one = any([args.garak_only, args.deepeval_only, args.ragas_only,
-        args.pyrit_only, args.guard_only, args.langfuse_only, args.many_shot_only,
-        args.human_redteam, args.encoded_only, args.tool_inject_only, args.backdoor_only,
-        args.multilingual_only, args.tool_inject_only, args.backdoor_only,
-        args.rag_security_only, args.agent_security_only])
+    only_one = any(getattr(args, step.only_flag) for step in STEPS) or args.human_redteam
 
     exit_codes: list[int] = []
-
-    # --- Step 1: Garak --------------------------------------------
-    if args.garak_only or not only_one:
-        print_header("STEP 1 - Garak: Vulnerability Scan + Red Teaming (pre-deployment)")
-        print("  Probing your LLM for vulnerabilities with adversarial inputs...")
-        exit_codes.append(run([
-            sys.executable, "garak/run_garak.py",
-            "--probes", args.garak_depth,
-        ]))
-        print("\n  Garak results saved to: results/garak/")
-
-    # --- Step 2: DeepEval --------------------------------------------
-    if args.deepeval_only or not only_one:
-        print_header("STEP 2 - DeepEval: Safety Testing (bias + toxicity + hallucination + PII)")
-        print("  Testing for harmful output, bias, hallucination, PII leakage, prompt injection...")
-        exit_codes.append(run([sys.executable, "deepeval/run_deepeval.py"]))
-        print("\n  DeepEval results saved to: results/deepeval/")
-
-    # --- Step 3: RAGAS --------------------------------------------
-    if args.ragas_only or (not only_one and not args.skip_ragas):
-        print_header("STEP 3 - RAGAS: RAG Pipeline Safety (context poisoning + faithfulness)")
-        print("  Testing for poisoned context, hallucination, retrieval quality...")
-        exit_codes.append(run([sys.executable, "ragas/run_ragas.py"]))
-        print("\n  RAGAS results saved to: results/ragas/")
-    elif not only_one and args.skip_ragas:
-        print("\n  [SKIPPED] RAGAS - use --ragas-only to run separately")
-
-    # --- Step 4: PyRIT --------------------------------------------
-    if args.pyrit_only or (not only_one and not args.skip_pyrit):
-        print_header("STEP 4 - PyRIT: Multi-turn Agentic Red Teaming")
-        print("  Running goal-directed adaptive attacks across multiple turns...")
-        exit_codes.append(run([sys.executable, "pyrit/run_pyrit.py"]))
-        print("\n  PyRIT results saved to: results/pyrit/")
-    elif not only_one and args.skip_pyrit:
-        print("\n  [SKIPPED] PyRIT - use --pyrit-only to run separately")
-
-    # --- Step 5: LLM Guard --------------------------------------------
-    if args.guard_only or not only_one:
-        print_header("STEP 5 - LLM Guard: Runtime Protection Demo")
-        print("  Testing input/output scanners against sample attack prompts...")
-        exit_codes.append(run([sys.executable, "llm_guard/run_guard.py"]))
-        print("\n  LLM Guard logs saved to: results/llm_guard/")
-
-    # --- Step 6: LangFuse --------------------------------------------
-    if args.langfuse_only or (not only_one and not args.skip_langfuse):
-        print_header("STEP 6 - LangFuse: Production Monitoring Demo")
-        print("  Sending traced requests + scoring for safety in dashboard...")
-        exit_codes.append(run([sys.executable, "langfuse/run_langfuse.py"]))
-        print("\n  View traces at: https://cloud.langfuse.com")
-    elif not only_one and args.skip_langfuse:
-        print("\n  [SKIPPED] LangFuse - set LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY to enable")
-
-    # --- Step 7: Human Red Team --------------------------------------------
-    if args.human_redteam and not args.ci:
-        print_header("STEP 7 - Human Red Team: Manual Attack Session")
-        print("  Interactive session - a human tester probes the model...")
-        run([sys.executable, "human_redteam/run_redteam.py"])
-        print("\n  Human red team results saved to: results/human_redteam/")
-    elif not only_one:
-        print("\n  [INFO] Human red team not run automatically (interactive).")
-        print("     Run manually: python run_security.py --human-redteam")
-
-    # --- Step 8: Encoded & Obfuscated Attacks --------------------------------------------
-    if args.encoded_only or (not only_one and not args.skip_encoded):
-        print_header("STEP 8 - Encoded Attacks: Bypass & Obfuscation Testing")
-        print("  Testing base64, rot13, hex, morse, leetspeak, homoglyphs and more...")
-        exit_codes.append(run([sys.executable, "encoded_attacks/run_encoded_attacks.py"]))
-        print("\n  Encoded attack results saved to: results/encoded_attacks/")
-    elif not only_one and args.skip_encoded:
-        print("\n  [SKIPPED] Encoded attacks - use --encoded-only to run separately")
-
-    # --- Step 9: Many-Shot Jailbreak --------------------------------------------
-    if args.in_context_only or (not only_one and not args.skip_many_shot):
-        print_header("STEP 9 - Many-Shot Jailbreaks: In-Context Conditioning Attacks")
-        print("  Testing pure-harmful, gradual-escalation, and camouflaged strategies...")
-        exit_codes.append(run([sys.executable, "in_context_attacks/run_many_shot.py"]))
-        print("\n  Many-shot results saved to: results/in_context_attacks/")
-    elif not only_one and args.skip_many_shot:
-        print("\n  [SKIPPED] Many-shot jailbreaks - use --in-context-only to run separately")
-
-    # --- Step 10: Multilingual Attacks --------------------------------------------
-    if args.multilingual_only or (not only_one and not args.skip_multilingual):
-        print_header("STEP 10 - Multilingual Attacks: Cross-Language Safety Bypass")
-        print("  Testing Arabic, Chinese, Russian, Hindi, Spanish, French, German...")
-        exit_codes.append(run([sys.executable, "multilingual/run_multilingual.py"]))
-        print("\n  Multilingual results saved to: results/multilingual/")
-    elif not only_one and args.skip_multilingual:
-        print("\n  [SKIPPED] Multilingual attacks - use --multilingual-only to run separately")
-
-    # --- Step 11: Tool-Call Injection --------------------------------------------
-    if args.tool_inject_only or (not only_one and not args.skip_tool_inject):
-        print_header("STEP 11 - Tool-Call Injection: Agentic Indirect Prompt Injection")
-        print("  Injecting malicious instructions via search, file, email, database results...")
-        exit_codes.append(run([sys.executable, "tool_inject/run_tool_inject.py"]))
-        print("\n  Tool injection results saved to: results/tool_inject/")
-    elif not only_one and args.skip_tool_inject:
-        print("\n  [SKIPPED] Tool-call injection - use --tool-inject-only to run separately")
-
-    # --- Step 12: Backdoor / Trojan Triggers --------------------------------------------
-    if args.backdoor_only or (not only_one and not args.skip_backdoor):
-        print_header("STEP 12 - Backdoor Triggers: Trojan Phrase Amplification Testing")
-        print("  Measuring compliance rate with / without DAN, authority, roleplay triggers...")
-        exit_codes.append(run([sys.executable, "backdoor/run_backdoor.py"]))
-        print("\n  Backdoor results saved to: results/backdoor/")
-    elif not only_one and args.skip_backdoor:
-        print("\n  [SKIPPED] Backdoor triggers - use --backdoor-only to run separately")
-
-    # --- Step 13: RAG / Vector Security --------------------------------------------
-    if args.rag_security_only or (not only_one and not args.skip_rag_security):
-        print_header("STEP 13 - RAG Security: Vector / Embedding Weakness Testing (LLM08)")
-        print("  Testing 9 attack vectors: injection, PII leak, embedding authority override, flooding...")
-        exit_codes.append(run([sys.executable, "rag_security/run_rag_security.py"]))
-        print("\n  RAG security results saved to: results/rag_security/")
-    elif not only_one and args.skip_rag_security:
-        print("\n  [SKIPPED] RAG security - use --rag-security-only to run separately")
-
-    # --- Step 14: Agentic Security --------------------------------------------
-    if args.agent_security_only or (not only_one and not args.skip_agent_security):
-        print_header("STEP 14 - Agentic Security: Multi-turn, Tool Authorization, Memory")
-        print("  Testing multi-turn attacks, tool permissions, and agent memory isolation...")
-        exit_codes.append(run([sys.executable, "agent_security/run_agent_security.py"]))
-        print("\n  Agent security results saved to: results/agent_security/")
-    elif not only_one and args.skip_agent_security:
-        print("\n  [SKIPPED] Agentic security - use --agent-security-only to run separately")
-
-    # --- Summary --------------------------------------------
-    print_header("Security + Safety Run Complete")
-    print("  Results:")
-    print("  results/garak/          - vulnerability scan (attack surface + red team)")
-    print("  results/deepeval/       - safety scan (bias, toxicity, hallucination)")
-    print("  results/ragas/          - RAG safety (context poisoning, faithfulness)")
-    print("  results/pyrit/          - agentic red team (multi-turn attack results)")
-    print("  results/llm_guard/      - runtime scanner audit log")
-    print("  results/human_redteam/  - human red team session logs")
-    print("  results/encoded_attacks/ - encoded/obfuscated bypass test results")
-    print("  results/in_context_only/      - many-shot jailbreak compliance matrix")
-    print("  results/multilingual/   - cross-language safety bypass results")
-    print("  results/tool_inject/    - agentic indirect prompt injection results")
-    print("  results/backdoor/       - backdoor trigger amplification report")
-    print("  results/rag_security/   - RAG/vector injection and PII leakage report")
-    print("  results/agent_security/ - multi-turn, tool authorization, memory reports")
-    print("  cloud.langfuse.com      - live production trace dashboard")
-    print()
-    print("  Next steps:")
-    print("  1. Review Garak + PyRIT reports for security vulnerabilities")
-    print("  2. Review DeepEval + RAGAS reports for safety gaps")
-    print("  3. Integrate LLM Guard into your app for continuous monitoring")
-    print("  4. Instrument your app with LangFuse SDK for continuous monitoring")
-    print("  5. Run human red team: python run_security.py --human-redteam")
-    print("  6. Review encoded attack report for scanner bypass gaps")
-    print("  7. Review many-shot report for in-context conditioning compliance rate")
-    print("  8. Review multilingual report for language-based safety gaps")
-    print("  9. Review tool-inject report for agentic indirect prompt injection")
-    print("  10. Review backdoor report for trigger amplification (delta compliance rate)")
-    print("  11. Review RAG security report for vector/embedding injection vulnerabilities")
-    print("  12. Review agent security report for multi-turn, authorization, and memory findings")
-    print("  13. Re-run after fixes to verify they're resolved")
-    print("=" * 55)
-
-    if args.ci and any(code != 0 for code in exit_codes):
-        failed = sum(1 for code in exit_codes if code != 0)
-        print(f"\n  CI: {failed} tool(s) exited with errors - pipeline marked as failed.")
-        sys.exit(1)
+    for step in STEPS:
+        run_step(step, args, only_one, exit_codes)
+    run_human_redteam(args, only_one)
+    print_summary(exit_codes)
+    report_ci_status(args, exit_codes)
 
 
 if __name__ == "__main__":

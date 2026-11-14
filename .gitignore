@@ -1,11 +1,16 @@
 # Environment variables — never commit
 .env
 
-# Virtual environment
+# Virtual environments
 .venv/
+.venv-garak/
 
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
+
+# Test coverage data
+.coverage
+htmlcov/
 

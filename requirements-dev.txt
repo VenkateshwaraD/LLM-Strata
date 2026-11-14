@@ -1,0 +1,5 @@
+# requirements-dev.txt — Development-only dependencies for LLM Strata
+# Install: pip install -r requirements-dev.txt
+# Runtime dependencies live in requirements.txt — nothing here ships to CI jobs.
+
+coverage>=7.6.0

@@ -1,5 +1,5 @@
-"""
-setup.py - One-time setup for LLM Security Framework
+"""setup.py - One-time setup for LLM Security Framework.
+
 Cross-platform: Windows and Linux.
 
 Author : Venkateshwara Doijode
@@ -12,19 +12,29 @@ import subprocess
 import sys
 from pathlib import Path
 
+RESULT_DIRS = (
+    "garak", "deepeval", "ragas", "pyrit", "llm_guard", "human_redteam",
+    "encoded_attacks", "in_context_attacks", "multilingual", "tool_inject",
+    "backdoor", "rag_security", "agent_security",
+)
+
 
 def run(cmd: list[str], check: bool = True):
+    """Run a command, echoing it first."""
     print(f"  > {' '.join(cmd)}")
     return subprocess.run(cmd, check=check)
 
 
-def main():
+def print_header(title: str):
+    """Print a section header."""
     print()
     print("=" * 55)
-    print("  LLM Strata - Setup")
+    print(f"  {title}")
     print("=" * 55)
 
-    # --- Check Python version ---------------------------------
+
+def check_python() -> None:
+    """Fail fast if the interpreter is too old."""
     print("\n[1/4] Checking Python...")
     version = sys.version_info
     if version < (3, 10):
@@ -36,95 +46,75 @@ def main():
         print("    Some dependencies (garak, ragas, pyrit) may not yet support Python 3.13+.")
         print("    Use Python 3.10-3.12 for best compatibility.")
 
-    # --- Create virtual environment -----------------------------
-    print("\n[2/4] Creating virtual environment...")
-    if not Path(".venv").exists():
-        run([sys.executable, "-m", "venv", ".venv"])
-        print("  Virtual environment created at .venv/")
-    else:
-        print("  .venv already exists - skipping.")
 
-    # --- Determine pip path -----------------------------
+def create_venv(name: str) -> Path:
+    """Create a virtual environment if it does not already exist."""
+    venv = Path(name)
+    if venv.exists():
+        print(f"  {name} already exists - skipping.")
+    else:
+        run([sys.executable, "-m", "venv", name])
+        print(f"  Virtual environment created at {name}/")
+    return venv
+
+
+def venv_pip(venv: Path) -> str:
+    """Return the pip executable path inside a virtual environment."""
     if sys.platform == "win32":
-        pip = str(Path(".venv/Scripts/pip.exe"))
-        activate = ".venv\\Scripts\\activate"
-    else:
-        pip = str(Path(".venv/bin/pip"))
-        activate = "source .venv/bin/activate"
+        return str(venv / "Scripts" / "pip")
+    return str(venv / "bin" / "pip")
 
-    # --- Install dependencies -----------------------------
 
-    garak_venv = Path(".venv-garak")
-    if not garak_venv.exists():
-        run([sys.executable, "-m","venv",str(garak_venv)])
-        print("  Garak virtual envirnment created at .venv-garak/")
-    else:
-        print("  .venv-garak already existins - skipping")
-
-    if sys.platform == "win32":
-            garak_pip = str(garak_venv / "Scripts" / "pip.exe")
-
-    else:
-        garak_pip = str(garak_venv / "bin" / "pip.exe")
-        
-    run([garak_pip, "install", "--upgrade", "pip"])
-    run([garak_pip, "install", "-r", "requirements-garak.txt"])
+def create_envs() -> None:
+    """Create the main and isolated Garak virtual environments."""
+    print("\n[2/4] Creating virtual environments...")
+    create_venv(".venv")
+    garak_venv = create_venv(".venv-garak")
+    run([venv_pip(garak_venv), "install", "--upgrade", "pip"])
+    run([venv_pip(garak_venv), "install", "-r", "requirements-garak.txt"])
     print("  Garak packages installed.")
 
+
+def install_dependencies() -> None:
+    """Install main requirements into .venv."""
     print("\n[3/4] Installing dependencies...")
+    pip = venv_pip(Path(".venv"))
     run([pip, "install", "--upgrade", "pip"])
     run([pip, "install", "-r", "requirements.txt"])
     print("  Main packages installed.")
 
 
-    # --- Create results directories -----------------------------
+def create_result_dirs() -> None:
+    """Create the results directory for each layer."""
     print("\n[4/4] Creating results directories...")
-    Path("results/garak").mkdir(parents=True, exist_ok=True)
-    Path("results/deepeval").mkdir(parents=True, exist_ok=True)
-    Path("results/ragas").mkdir(parents=True, exist_ok=True)
-    Path("results/pyrit").mkdir(parents=True, exist_ok=True)
-    Path("results/llm_guard").mkdir(parents=True, exist_ok=True)
-    Path("results/human_redteam").mkdir(parents=True, exist_ok=True)
-    Path("results/encoded_attacks").mkdir(parents=True, exist_ok=True)
-    Path("results/in_context_attacks").mkdir(parents=True, exist_ok=True)
-    Path("results/multilingual").mkdir(parents=True, exist_ok=True)
-    Path("results/tool_inject").mkdir(parents=True, exist_ok=True)
-    Path("results/backdoor").mkdir(parents=True, exist_ok=True)
-    Path("results/rag_security").mkdir(parents=True, exist_ok=True)
-    print("  results/garak/         - Garak scan reports")
-    print("  results/deepeval/      - DeepEval safety reports")
-    print("  results/ragas/         - RAGAS RAG safety reports")
-    print("  results/pyrit/         - PyRIT audit logs")
-    print("  results/llm_guard/     - LLM Guard audit logs")
-    print("  results/human_redteam/ - Human red team session logs")
-    print("  results/encoded_attacks/ - Encoded/obfuscated attack test results")
-    print("  results/in_context_attacks/     - In-Context attack jailbreak compliance matrix")
-    print("  results/multilingual/  - Cross-language safety bypass results")
-    print("  results/tool_inject/   - Agentic indirect prompt injection results")
-    print("  results/backdoor/      - Backdoor trigger amplification report")
-    print("  results/rag_security/  - RAG/vector injection and PII leakage report")
+    for layer in RESULT_DIRS:
+        Path(f"results/{layer}").mkdir(parents=True, exist_ok=True)
+        print(f"  results/{layer}/")
     print("  (LangFuse results live at cloud.langfuse.com)")
 
-    # --- Instructions -----------------------------
+
+def print_instructions() -> None:
+    """Print post-setup usage instructions."""
+    activate = ".venv\\Scripts\\activate" if sys.platform == "win32" else "source .venv/bin/activate"
     print()
-    print("=" * 55)
-    print("  Setup complete!")
-    print()
-    print("  Activate environment:")
-    print(f"    {activate}")
-    print()
-    print("  Set Credentials for your active provider in profiles.yaml")
-    print()
-    print("  Then run:")
+    print_header("Setup complete!")
+    print(f"  Activate environment:\n    {activate}")
+    print("\n  Set credentials for your active provider in profiles.yaml")
+    print("\n  Then run:")
     print("    python run_security.py                 # run all automated tools")
-    print("    python run_security.py --garak-only     # Garak only")
-    print("    python run_security.py --deepeval-only  # DeepEval only")
-    print("    python run_security.py --ragas-only     # RAGAS only")
-    print("    python run_security.py --pyrit-only     # PyRIT only")
-    print("    python run_security.py --guard-only     # LLM Guard only")
-    print("    python run_security.py --langfuse-only  # LangFuse only")
-    print("    python run_security.py --human-redteam  # Human red team session")
+    print("    python run_security.py --garak-only    # Garak only")
+    print("    python run_security.py --human-redteam # Human red team session")
     print("=" * 55)
+
+
+def main() -> None:
+    """Run the full setup."""
+    print_header("LLM Strata - Setup")
+    check_python()
+    create_envs()
+    install_dependencies()
+    create_result_dirs()
+    print_instructions()
 
 
 if __name__ == "__main__":

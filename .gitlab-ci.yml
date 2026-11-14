@@ -82,7 +82,7 @@ garak:
     - pip install -r requirements.txt -q
     - pip install -r requirements-garak.txt -q
   script:
-    - GARAK_PYTHON="$(python -c 'import sys; print(sys.executable)')" python garak/run_garak.py --probes quick
+    - GARAK_PYTHON="$(python -c 'import sys; print(sys.executable)')" python layers/scan/garak/run_garak.py --probes quick
   timeout: 20m
   allow_failure: true      # Garak can be flaky on shared runners; results still saved
 
@@ -90,14 +90,14 @@ garak:
 deepeval:
   extends: .scan_base
   script:
-    - python deepeval/run_deepeval.py
+    - python layers/scan/deepeval/run_deepeval.py
   timeout: 15m
 
 # --- RAGAS: RAG Pipeline Safety ------------------------------------------
 ragas:
   extends: .scan_base
   script:
-    - python ragas/run_ragas.py
+    - python layers/scan/ragas/run_ragas.py
   timeout: 15m
   rules:
     - if: $SKIP_RAGAS == "true"
@@ -108,7 +108,7 @@ ragas:
 pyrit:
   extends: .scan_base
   script:
-    - python pyrit/run_pyrit.py
+    - python layers/scan/pyrit/run_pyrit.py
   timeout: 30m
   rules:
     - if: $SKIP_PYRIT == "true"
@@ -119,7 +119,7 @@ pyrit:
 llm-guard:
   extends: .scan_base
   script:
-    - python llm_guard/run_llm_guard.py
+    - python layers/scan/llm_guard/run_guard.py
   timeout: 10m
 
 # --- Shared base for all attack-stage jobs ------------------------------------
@@ -140,7 +140,7 @@ llm-guard:
 encoded_attacks:
   extends: .attack_base
   script:
-    - python encoded_attacks/run_encoded_attacks.py
+    - python layers/attack/encoded_attacks/run_encoded_attacks.py
   timeout: 20m
   rules:
     - if: $SKIP_ENCODED == "true"
@@ -151,7 +151,7 @@ encoded_attacks:
 many-shot:
   extends: .attack_base
   script:
-    - python in_context_attacks/run_many_shot.py
+    - python layers/attack/in_context_attacks/run_many_shot.py
   timeout: 30m
   rules:
     - if: $SKIP_MANY_SHOT == "true"
@@ -162,7 +162,7 @@ many-shot:
 multilingual:
   extends: .attack_base
   script:
-    - python multilingual/run_multilingual.py
+    - python layers/attack/multilingual/run_multilingual.py
   timeout: 25m
   rules:
     - if: $SKIP_MULTILINGUAL == "true"
@@ -173,7 +173,7 @@ multilingual:
 tool-inject:
   extends: .attack_base
   script:
-    - python tool_inject/run_tool_inject.py
+    - python layers/attack/tool_inject/run_tool_inject.py
   timeout: 15m
   rules:
     - if: $SKIP_TOOL_INJECT == "true"
@@ -184,7 +184,7 @@ tool-inject:
 backdoor:
   extends: .attack_base
   script:
-    - python backdoor/run_backdoor.py
+    - python layers/attack/backdoor/run_backdoor.py
   timeout: 30m
   rules:
     - if: $SKIP_BACKDOOR == "true"
@@ -195,7 +195,7 @@ backdoor:
 rag-security:
   extends: .attack_base
   script:
-    - python rag_security/run_rag_security.py
+    - python layers/attack/rag_security/run_rag_security.py
   timeout: 15m
   rules:
     - if: $SKIP_RAG_SECURITY == "true"
@@ -210,7 +210,7 @@ langfuse:
     - pip install --upgrade pip -q
     - pip install -r requirements.txt -q
   script:
-    - python langfuse/run_langfuse.py
+    - python layers/monitor/langfuse/run_langfuse.py
   timeout: 10m
   allow_failure: true   # Never block a pipeline on monitoring
   artifacts:
