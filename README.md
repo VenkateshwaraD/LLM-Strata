@@ -243,8 +243,7 @@ LLM-Strata/
 ├── run_security.py          # Main pipeline runner
 ├── setup.py                 # Environment setup
 ├── profiles.yaml            # Model profile selection
-├── requirements.txt         # Python dependencies
-├── requirements-dev.txt     # Dev install: includes requirements.txt + coverage
+├── requirements.txt         # Python dependencies (runtime + dev tools)
 ├── requirements-garak.txt   # Garak-only deps (separate venv — openai 2.x vs pyrit's 3.x)
 ├── .gitlab-ci.yml           # GitLab CI pipeline definition
 ├── core/                    # Shared package

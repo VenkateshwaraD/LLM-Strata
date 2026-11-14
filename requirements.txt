@@ -31,3 +31,6 @@ pyrit>=1.0.0,<2.0.0
 langfuse>=4.15.2,<6.0.0
 # Requires: LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY (free at cloud.langfuse.com)
 # Note: v4+ API uses get_client(), start_as_current_observation, create_score(); verified through v5.x.
+
+# ── Dev tools ────────────────────────────────────────────────────────
+coverage>=7.6.0
