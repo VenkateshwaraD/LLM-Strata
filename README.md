@@ -244,7 +244,8 @@ LLM-Strata/
 ├── setup.py                 # Environment setup
 ├── profiles.yaml            # Model profile selection
 ├── requirements.txt         # Python dependencies
-├── requirements-dev.txt     # Test/coverage dependencies
+├── requirements-dev.txt     # Dev install: includes requirements.txt + coverage
+├── requirements-garak.txt   # Garak-only deps (separate venv — openai 2.x vs pyrit's 3.x)
 ├── .gitlab-ci.yml           # GitLab CI pipeline definition
 ├── core/                    # Shared package
 │   ├── env_loader.py        # Credential and .env loading

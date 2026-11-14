@@ -77,12 +77,17 @@ cache:
 # ─── Garak: Vulnerability Scanner + Red Teaming ─────────────────────
 garak:
   extends: .scan_base
+  # garak needs openai>=2,<3 while pyrit needs openai>=3,<4 — they cannot share
+  # one environment, so garak gets its own venv exactly as setup.py does locally.
+  # run_garak.py only needs pyyaml; it discovers .venv-garak/bin/python itself.
   before_script:
     - pip install --upgrade pip -q
-    - pip install -r requirements.txt -q
-    - pip install -r requirements-garak.txt -q
+    - pip install "pyyaml>=6.0.3" -q
+    - python -m venv .venv-garak
+    - .venv-garak/bin/pip install --upgrade pip -q
+    - .venv-garak/bin/pip install -r requirements-garak.txt -q
   script:
-    - GARAK_PYTHON="$(python -c 'import sys; print(sys.executable)')" python layers/scan/garak/run_garak.py --probes quick
+    - python layers/scan/garak/run_garak.py --probes quick
   timeout: 20m
   allow_failure: true      # Garak can be flaky on shared runners; results still saved
 

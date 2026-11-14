@@ -1,5 +1,9 @@
 # requirements-dev.txt — Development-only dependencies for LLM Strata
 # Install: pip install -r requirements-dev.txt
-# Runtime dependencies live in requirements.txt — nothing here ships to CI jobs.
+# Installs everything from requirements.txt plus the dev tools below.
+# NOTE: garak stays in requirements-garak.txt — it needs openai 2.x while
+# pyrit needs openai 3.x, so garak always gets its own venv (see setup.py).
+
+-r requirements.txt
 
 coverage>=7.6.0
