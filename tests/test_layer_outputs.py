@@ -161,8 +161,9 @@ class GarakHelpersTests(unittest.TestCase):
 
     def test_garak_python_missing_env_exits(self):
         with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(SystemExit):
-                RUNNERS["garak"].get_garak_python()
+            with patch("pathlib.Path.exists", return_value=False):
+                with self.assertRaises(SystemExit):
+                    RUNNERS["garak"].get_garak_python()
 
 
 if __name__ == "__main__":
