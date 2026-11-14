@@ -5,12 +5,14 @@ Cross-platform: Windows and Linux.
 Author : Venkateshwara Doijode
 Project: LLM Strata - End-to-End LLM Security & Safety Framework
 
-Usage: python setup.py
+Usage: python setup.py [--dry-run]
 """
 
 import subprocess
 import sys
 from pathlib import Path
+
+DRY_RUN = "--dry-run" in sys.argv[1:]
 
 RESULT_DIRS = (
     "garak", "deepeval", "ragas", "pyrit", "llm_guard", "human_redteam",
@@ -20,8 +22,10 @@ RESULT_DIRS = (
 
 
 def run(cmd: list[str], check: bool = True):
-    """Run a command, echoing it first."""
-    print(f"  > {' '.join(cmd)}")
+    """Run a command, echoing it first. In dry-run mode, only echo."""
+    print(f"  > {' '.join(cmd)}{'  [DRY RUN]' if DRY_RUN else ''}")
+    if DRY_RUN:
+        return None
     return subprocess.run(cmd, check=check)
 
 
@@ -88,7 +92,8 @@ def create_result_dirs() -> None:
     """Create the results directory for each layer."""
     print("\n[4/4] Creating results directories...")
     for layer in RESULT_DIRS:
-        Path(f"results/{layer}").mkdir(parents=True, exist_ok=True)
+        if not DRY_RUN:
+            Path(f"results/{layer}").mkdir(parents=True, exist_ok=True)
         print(f"  results/{layer}/")
     print("  (LangFuse results live at cloud.langfuse.com)")
 
@@ -109,7 +114,8 @@ def print_instructions() -> None:
 
 def main() -> None:
     """Run the full setup."""
-    print_header("LLM Strata - Setup")
+    title = "LLM Strata - Setup" + (" (dry run - no changes)" if DRY_RUN else "")
+    print_header(title)
     check_python()
     create_envs()
     install_dependencies()
